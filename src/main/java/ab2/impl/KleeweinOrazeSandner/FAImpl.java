@@ -2,7 +2,9 @@ package ab2.impl.KleeweinOrazeSandner;
 
 import ab2.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /*********************************
@@ -15,12 +17,15 @@ public class FAImpl implements FA {
     private Set<Integer> acceptingStates;
     private Set<FATransition> transitions;
     private int numStates;
+    private int count;
 
     public FAImpl(Set<Character> symbols, Set<Integer> acceptingStates, Set<FATransition> transitions, int numStates) {
         this.symbols = symbols;
         this.acceptingStates = acceptingStates;
         this.transitions = transitions;
         this.numStates = numStates;
+        this.count = -1;
+        extractNodes();
     }
 
     @Override
@@ -88,8 +93,53 @@ public class FAImpl implements FA {
         return null;
     }
 
+    private void extractNodes() {
+        for (FATransition t : this.transitions) {
+            if (t.symbols().length() > 1) {
+                Character cNew = t.symbols().charAt(0);
+                String subString = t.symbols().substring(1);
+                FATransition tNew = new FATransitionImpl(t.from(), this.count--, cNew.toString());
+                FATransition tSecond = new FATransitionImpl(tNew.to(), t.to(), subString);
+                this.transitions.remove(t);
+                this.transitions.add(tNew);
+                this.transitions.add(tSecond);
+                this.numStates++;
+                extractNodes();
+                break;
+            }
+        }
+    }
+
     @Override
     public boolean accepts(String w) throws IllegalCharacterException {
+        if (w.equals("")) return acceptsEpsilon();
+        List<Character> word = new ArrayList<>();
+        for (int i = 0; i < w.length(); i++) {
+            word.add(w.charAt(i));
+        }
+        Set<Integer> curr = new HashSet<>();
+        curr.add(0);
+        for (FATransition t : this.transitions) {
+            if (t.symbols().equals("") && t.from() == 0) curr.add(t.to());
+        }
+        for (Character c : word) {
+            Set<Integer> currNew = new HashSet<>();
+            for (FATransition t : this.transitions) {
+                if (curr.contains(t.from()) && t.symbols().equals("")) {
+                    curr.add(t.to());
+                    currNew.add(t.to());
+                }
+            }
+            for (FATransition t : this.transitions) {
+                if (curr.contains(t.from()) && t.symbols().equals(c.toString())) {
+                    currNew.add(t.to());
+                }
+            }
+            curr = currNew;
+        }
+        for (Integer state : this.acceptingStates) {
+            if (curr.contains(state)) return true;
+        }
         return false;
     }
 
@@ -140,11 +190,6 @@ public class FAImpl implements FA {
     @Override
     public boolean acceptsEpsilon() {
         if (this.acceptingStates.size() == 1 && this.acceptingStates.contains(0)) {
-            for (FATransition t : this.transitions) {
-                if (t.from() == 0 && t.to() == 0) {
-                    if (!t.symbols().equals("")) return false;
-                }
-            }
             return true;
         }
         Set<Integer> reachableEpsilon = new HashSet<>();
