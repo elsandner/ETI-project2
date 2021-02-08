@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-08T11:53:50" hostname="MBP-Fabian" time="0.024">
+<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-08T14:51:41" hostname="MBP-Fabian" time="0.026">
   <properties/>
-  <testcase name="NFA_Properties()" classname="ab2.Tests" time="0.024">
-    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;true&gt; but was: &lt;false&gt;
-	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:55)
-	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:40)
-	at org.junit.jupiter.api.AssertTrue.assertTrue(AssertTrue.java:35)
-	at org.junit.jupiter.api.Assertions.assertTrue(Assertions.java:162)
-	at ab2.Tests.testPropertiesNFA1(Tests.java:1951)
-	at ab2.Tests.NFA_Properties(Tests.java:254)
+  <testcase name="NFA_Operations_Union()" classname="ab2.Tests" time="0.026">
+    <failure message="java.lang.NullPointerException" type="java.lang.NullPointerException">java.lang.NullPointerException
+	at ab2.Tests.NFA_Operations_Union(Tests.java:275)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)

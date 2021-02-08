@@ -93,6 +93,9 @@ public class FAImpl implements FA {
         return null;
     }
 
+    /**
+     * helper function to split edges with more then one symbol e.g "abc" into separate edges and nodes
+     */
     private void extractNodes() {
         for (FATransition t : this.transitions) {
             if (t.symbols().length() > 1) {
@@ -158,10 +161,18 @@ public class FAImpl implements FA {
             for (Integer state : this.acceptingStates) {
                 if (reachable.contains(state)) return false;
             }
+            if (this.acceptingStates.contains(0)) return false;
         }
         return true;
     }
 
+    /**
+     * helper function to get the possible reachable states
+     *
+     * @param reachable       set of starting states
+     * @param possibleSymbols the symbols allowed to traverse to other states
+     * @return a set of all reachable states given a starting configuration
+     */
     private Set<Integer> loopForReachable(Set<Integer> reachable, Set<String> possibleSymbols) {
         Set<Integer> reachableNew = new HashSet<>(reachable);
         for (FATransition t : this.transitions) {
@@ -205,12 +216,27 @@ public class FAImpl implements FA {
 
     @Override
     public boolean isInfinite() {
-        return false;
+        return !isFinite();
     }
 
     @Override
     public boolean isFinite() {
-        return false;
+        Set<Integer> visitedStates = new HashSet<>();
+        visitedStates.add(0);
+        Set<String> allSymbols = new HashSet<>();
+        allSymbols.add("");
+        for (Character c : this.symbols) {
+            allSymbols.add(c.toString());
+        }
+        visitedStates = loopForReachable(visitedStates, allSymbols);
+        Set<Integer> comp = new HashSet<>(visitedStates);
+        for (FATransition t : this.transitions) {
+            if (comp.contains(t.from())) {
+                if (t.from() == t.to() || t.to() == 0) return false;
+                if (!visitedStates.remove(t.to())) return false;
+            }
+        }
+        return true;
     }
 
     @Override
