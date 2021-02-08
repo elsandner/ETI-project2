@@ -55,7 +55,42 @@ public class FAImpl implements FA {
 
     @Override
     public FA union(FA a) {
-        return null;
+        Factory factory = new FactoryImpl();
+        int offsetCurr = 1000;
+        int offsetNext = -1000;
+
+        // combine symbols
+        Set<Character> symbolsNew = new HashSet<>();
+        symbolsNew.addAll(this.symbols);
+        symbolsNew.addAll(a.getSymbols());
+
+        // combine transitions
+        Set<FATransition> transitionsNew = new HashSet<>();
+        for (FATransition t : this.transitions) {
+            transitionsNew.add(factory.createTransition(t.from() + offsetCurr, t.to() + offsetCurr, t.symbols()));
+        }
+        for (FATransition t : a.getTransitions()) {
+            transitionsNew.add(factory.createTransition(t.from() + offsetNext, t.to() + offsetNext, t.symbols()));
+        }
+
+        // combine accepting states
+        Set<Integer> acceptingStatesNew = new HashSet<>();
+        for (Integer state : this.acceptingStates) {
+            acceptingStatesNew.add(state + offsetCurr);
+        }
+        for (Integer state : a.getAcceptingStates()) {
+            acceptingStatesNew.add(state + offsetNext);
+        }
+
+        int numStatesNew = a.getNumStates() + this.numStates;
+
+        // epsilon transitions into each FA
+        transitionsNew.add(factory.createTransition(0, offsetCurr, ""));
+        transitionsNew.add(factory.createTransition(0, offsetNext, ""));
+
+        return factory.createFA(numStatesNew, symbolsNew, acceptingStatesNew, transitionsNew);
+
+
     }
 
     @Override
@@ -125,19 +160,25 @@ public class FAImpl implements FA {
         for (FATransition t : this.transitions) {
             if (t.symbols().equals("") && t.from() == 0) curr.add(t.to());
         }
-        for (Character c : word) {
+
+        for (int i = 0; i < word.size(); i++) {
+            Character c = word.get(i);
             Set<Integer> currNew = new HashSet<>();
+            boolean hadEpsilon = false;
             for (FATransition t : this.transitions) {
                 if (curr.contains(t.from()) && t.symbols().equals("")) {
                     curr.add(t.to());
                     currNew.add(t.to());
+                    hadEpsilon = true;
                 }
             }
             for (FATransition t : this.transitions) {
                 if (curr.contains(t.from()) && t.symbols().equals(c.toString())) {
                     currNew.add(t.to());
+                    hadEpsilon = false;
                 }
             }
+            if (hadEpsilon) i--;
             curr = currNew;
         }
         for (Integer state : this.acceptingStates) {
