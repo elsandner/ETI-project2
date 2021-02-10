@@ -217,7 +217,9 @@ public class FAImpl implements FA {
     private Set<Integer> loopForReachable(Set<Integer> reachable, Set<String> possibleSymbols) {
         Set<Integer> reachableNew = new HashSet<>(reachable);
         for (FATransition t : this.transitions) {
-            if (t.from() == 0 && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
+            if (t.from() == 0 && possibleSymbols.contains(t.symbols()) || t.from() == 0 && t.symbols().equals(""))
+                reachableNew.add(t.to());
+            if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to());
             if (reachableNew.contains(t.from()) && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
         }
         if (!reachableNew.equals(reachable)) return loopForReachable(reachableNew, possibleSymbols);
@@ -228,14 +230,23 @@ public class FAImpl implements FA {
     public boolean acceptsEpsilonOnly() {
         Set<Integer> reachableOthers = new HashSet<>();
         Set<String> allSymbols = new HashSet<>();
+        if (!acceptsEpsilon()) return false;
+
         for (FATransition t : this.transitions) {
             if (!t.symbols().equals("")) allSymbols.add(t.symbols());
         }
         reachableOthers = loopForReachable(reachableOthers, allSymbols);
+        //TODO : check if it is reachable only with epsilon
+        Set<Integer> checkEpsilonStates = new HashSet<>();
+        Set<String> epsilon = new HashSet<>();
+        epsilon.add("");
+        checkEpsilonStates = loopForReachable(checkEpsilonStates, epsilon);
         for (Integer state : this.acceptingStates) {
-            if (reachableOthers.contains(state)) return false;
+            if (reachableOthers.contains(state)) {
+                if (!checkEpsilonStates.contains(state)) return false;
+            }
         }
-        return acceptsEpsilon();
+        return true;
 
     }
 
