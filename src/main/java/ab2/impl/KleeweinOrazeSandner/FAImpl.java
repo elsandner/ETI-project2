@@ -115,12 +115,38 @@ public class FAImpl implements FA {
 
     @Override
     public FA kleeneStar() {
-        return null;
+
+        Factory factory = new FactoryImpl();
+        int offset = 1000;
+
+        //change states
+        Set<FATransition> newTransitions = new HashSet<>();
+        for (FATransition t : this.transitions) {
+            newTransitions.add(factory.createTransition(t.from() + offset, t.to() + offset, t.symbols()));
+        }
+
+        //create new enter state
+        newTransitions.add(factory.createTransition(0, offset, ""));
+
+        //epsilon transitions from end to offset
+        Set<Integer> newAcceptingStates = new HashSet<>();
+        for (Integer state : this.acceptingStates) {
+            newAcceptingStates.add(state + offset);
+            newTransitions.add(factory.createTransition(state + offset, offset, ""));
+        }
+        newAcceptingStates.add(0);
+        return factory.createFA(this.numStates + 1, this.symbols, newAcceptingStates, newTransitions);
     }
 
     @Override
     public FA plus() {
-        return null;
+        Factory factory = new FactoryImpl();
+        Set<FATransition> newTransitions = new HashSet<>(this.transitions);
+        for (Integer state : this.acceptingStates) {
+            newTransitions.add(factory.createTransition(state, 0, ""));
+        }
+
+        return factory.createFA(this.numStates, this.symbols, this.acceptingStates, newTransitions);
     }
 
     @Override
@@ -230,20 +256,6 @@ public class FAImpl implements FA {
         for (FATransition t : this.transitions) {
             if (!t.symbols().equals("")) allSymbols.add(t.symbols());
         }
-        /*Set<Integer> reachableOthers = new HashSet<>();
-        if (!acceptsEpsilon()) return false;
-        reachableOthers = loopForReachable(reachableOthers, allSymbols);
-        //TODO : check if it is reachable only with epsilon
-        Set<Integer> checkEpsilonStates = new HashSet<>();
-        Set<String> epsilon = new HashSet<>();
-        epsilon.add("");
-        checkEpsilonStates = loopForReachable(checkEpsilonStates, epsilon);
-        for (Integer state : this.acceptingStates) {
-            if (reachableOthers.contains(state)) {
-                if (!checkEpsilonStates.contains(state)) return false;
-            }
-        }
-        return true;*/
 
         Set<Integer> reached = new HashSet<>();
         reached.add(0);
@@ -297,8 +309,10 @@ public class FAImpl implements FA {
         Set<Integer> comp = new HashSet<>(visitedStates);
         for (FATransition t : this.transitions) {
             if (comp.contains(t.from())) {
-                if (t.from() == t.to() || t.to() == 0) return false;
-                if (!visitedStates.remove(t.to())) return false;
+                if (!(t.from() == t.to() && t.symbols().equals(""))) {
+                    if (t.from() == t.to() || t.to() == 0) return false;
+                    if (!visitedStates.remove(t.to())) return false;
+                }
             }
         }
         return true;
@@ -316,6 +330,6 @@ public class FAImpl implements FA {
 
     @Override
     public Boolean equalsPlusAndStar() {
-        return null;
+        return acceptsEpsilon();
     }
 }
