@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-08T15:42:10" hostname="MBP-Fabian" time="0.035">
+<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-10T09:55:06" hostname="MBP-Fabian" time="0.068">
   <properties/>
-  <testcase name="NFA_Operations_Union()" classname="ab2.Tests" time="0.035">
+  <testcase name="NFA_Properties()" classname="ab2.Tests" time="0.068">
     <failure message="org.opentest4j.AssertionFailedError: expected: &lt;false&gt; but was: &lt;true&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;false&gt; but was: &lt;true&gt;
 	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:55)
 	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:40)
 	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:35)
 	at org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:210)
-	at ab2.Tests.NFA_Operations_Union(Tests.java:293)
+	at ab2.Tests.testPropertiesNFA6(Tests.java:1990)
+	at ab2.Tests.NFA_Properties(Tests.java:259)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
