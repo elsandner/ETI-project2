@@ -70,7 +70,7 @@ public class FAImpl implements FA {
             transitionsNew.add(factory.createTransition(t.from() + offsetCurr, t.to() + offsetCurr, t.symbols()));
         }
         for (FATransition t : a.getTransitions()) {
-            transitionsNew.add(factory.createTransition(t.from() + offsetNext, t.to() + offsetNext, t.symbols()));
+            transitionsNew.add(factory.createTransition(-t.from() + offsetNext, -t.to() + offsetNext, t.symbols()));
         }
 
         // combine accepting states
@@ -79,7 +79,7 @@ public class FAImpl implements FA {
             acceptingStatesNew.add(state + offsetCurr);
         }
         for (Integer state : a.getAcceptingStates()) {
-            acceptingStatesNew.add(state + offsetNext);
+            acceptingStatesNew.add(-state + offsetNext);
         }
 
         int numStatesNew = a.getNumStates() + this.numStates;
@@ -115,12 +115,38 @@ public class FAImpl implements FA {
 
     @Override
     public FA kleeneStar() {
-        return null;
+
+        Factory factory = new FactoryImpl();
+        int offset = 1000;
+
+        //change states
+        Set<FATransition> newTransitions = new HashSet<>();
+        for (FATransition t : this.transitions) {
+            newTransitions.add(factory.createTransition(t.from() + offset, t.to() + offset, t.symbols()));
+        }
+
+        //create new enter state
+        newTransitions.add(factory.createTransition(0, offset, ""));
+
+        //epsilon transitions from end to offset
+        Set<Integer> newAcceptingStates = new HashSet<>();
+        for (Integer state : this.acceptingStates) {
+            newAcceptingStates.add(state + offset);
+            newTransitions.add(factory.createTransition(state + offset, offset, ""));
+        }
+        newAcceptingStates.add(0);
+        return factory.createFA(this.numStates + 1, this.symbols, newAcceptingStates, newTransitions);
     }
 
     @Override
     public FA plus() {
-        return null;
+        Factory factory = new FactoryImpl();
+        Set<FATransition> newTransitions = new HashSet<>(this.transitions);
+        for (Integer state : this.acceptingStates) {
+            newTransitions.add(factory.createTransition(state, 0, ""));
+        }
+
+        return factory.createFA(this.numStates, this.symbols, this.acceptingStates, newTransitions);
     }
 
     @Override
@@ -157,28 +183,22 @@ public class FAImpl implements FA {
         }
         Set<Integer> curr = new HashSet<>();
         curr.add(0);
-        for (FATransition t : this.transitions) {
-            if (t.symbols().equals("") && t.from() == 0) curr.add(t.to());
-        }
 
         for (int i = 0; i < word.size(); i++) {
             Character c = word.get(i);
+
+            Set<String> epsilon = new HashSet<>();
+            epsilon.add("");
+            Set<Integer> reachable;
             Set<Integer> currNew = new HashSet<>();
-            boolean hadEpsilon = false;
-            for (FATransition t : this.transitions) {
-                if (curr.contains(t.from()) && t.symbols().equals("")) {
-                    curr.add(t.to());
-                    currNew.add(t.to());
-                    hadEpsilon = true;
-                }
-            }
+            reachable = loopForReachable(curr, epsilon);
+            curr.addAll(reachable);
+
             for (FATransition t : this.transitions) {
                 if (curr.contains(t.from()) && t.symbols().equals(c.toString())) {
                     currNew.add(t.to());
-                    hadEpsilon = false;
                 }
             }
-            if (hadEpsilon) i--;
             curr = currNew;
         }
         for (Integer state : this.acceptingStates) {
@@ -197,6 +217,7 @@ public class FAImpl implements FA {
             for (Character c : this.symbols) {
                 allSymbols.add(c.toString());
             }
+            reachable.add(0);
             reachable = loopForReachable(reachable, allSymbols);
 
             for (Integer state : this.acceptingStates) {
@@ -217,8 +238,8 @@ public class FAImpl implements FA {
     private Set<Integer> loopForReachable(Set<Integer> reachable, Set<String> possibleSymbols) {
         Set<Integer> reachableNew = new HashSet<>(reachable);
         for (FATransition t : this.transitions) {
-            if (t.from() == 0 && possibleSymbols.contains(t.symbols()) || t.from() == 0 && t.symbols().equals(""))
-                reachableNew.add(t.to());
+            /*if (t.from() == 0 && possibleSymbols.contains(t.symbols()) || t.from() == 0 && t.symbols().equals(""))
+                reachableNew.add(t.to());*/
             if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to());
             if (reachableNew.contains(t.from()) && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
         }
@@ -228,26 +249,30 @@ public class FAImpl implements FA {
 
     @Override
     public boolean acceptsEpsilonOnly() {
-        Set<Integer> reachableOthers = new HashSet<>();
+        if (this.acceptingStates.size() == 0) return false;
+
         Set<String> allSymbols = new HashSet<>();
-        if (!acceptsEpsilon()) return false;
 
         for (FATransition t : this.transitions) {
             if (!t.symbols().equals("")) allSymbols.add(t.symbols());
         }
-        reachableOthers = loopForReachable(reachableOthers, allSymbols);
-        //TODO : check if it is reachable only with epsilon
-        Set<Integer> checkEpsilonStates = new HashSet<>();
-        Set<String> epsilon = new HashSet<>();
-        epsilon.add("");
-        checkEpsilonStates = loopForReachable(checkEpsilonStates, epsilon);
-        for (Integer state : this.acceptingStates) {
-            if (reachableOthers.contains(state)) {
-                if (!checkEpsilonStates.contains(state)) return false;
+
+        Set<Integer> reached = new HashSet<>();
+        reached.add(0);
+        reached = loopForReachable(reached, allSymbols);
+        for (FATransition t : this.transitions) {
+            if (!t.symbols().equals("")) {
+                if (reached.contains(t.from())) {
+                    Set<Integer> reachableFromSymbol = new HashSet<>();
+                    reachableFromSymbol.add(t.to());
+                    reachableFromSymbol = loopForReachable(reachableFromSymbol, allSymbols);
+                    for (Integer state : this.acceptingStates) {
+                        if (reachableFromSymbol.contains(state)) return false;
+                    }
+                }
             }
         }
         return true;
-
     }
 
     @Override
@@ -284,8 +309,10 @@ public class FAImpl implements FA {
         Set<Integer> comp = new HashSet<>(visitedStates);
         for (FATransition t : this.transitions) {
             if (comp.contains(t.from())) {
-                if (t.from() == t.to() || t.to() == 0) return false;
-                if (!visitedStates.remove(t.to())) return false;
+                if (!(t.from() == t.to() && t.symbols().equals(""))) {
+                    if (t.from() == t.to() || t.to() == 0) return false;
+                    if (!visitedStates.remove(t.to())) return false;
+                }
             }
         }
         return true;
@@ -303,6 +330,6 @@ public class FAImpl implements FA {
 
     @Override
     public Boolean equalsPlusAndStar() {
-        return null;
+        return acceptsEpsilon();
     }
 }

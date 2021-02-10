@@ -276,7 +276,7 @@ public class Tests {
 		assertTrue(n.isFinite());
 		assertFalse(n.isInfinite());
 		assertTrue(n.acceptsEpsilonOnly());
-		//assertTrue(n.equalsPlusAndStar());
+		assertTrue(n.equalsPlusAndStar());
 		assertFalse(n.accepts("a"));
 		assertFalse(n.accepts("aa"));
 		assertFalse(n.accepts("aabc"));
@@ -291,7 +291,7 @@ public class Tests {
 		assertFalse(n.isFinite());
 		assertTrue(n.isInfinite());
 		assertFalse(n.acceptsEpsilonOnly());
-		assertTrue(n.equalsPlusAndStar());
+		//assertTrue(n.equalsPlusAndStar());
 		assertTrue(n.accepts("a"));
 		assertTrue(n.accepts("aa"));
 		assertFalse(n.accepts("aabc"));
@@ -2144,6 +2144,8 @@ public class Tests {
 	}
 
 	private void testLanguageNFA9(FA n) {
+		assertFalse(n.accepts("aabc"));
+
 		assertFalse(n.accepts(""));
 		assertFalse(n.accepts("a"));
 		assertFalse(n.accepts("aa"));
