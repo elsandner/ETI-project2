@@ -28,8 +28,7 @@ public class FactoryImpl implements Factory {
 
     @Override
     public RSA createRSA(int numStates, Set<Character> characters, Set<Integer> acceptingStates, Set<DFATransition> transitions) {
-       // return new RSAImpl(characters,acceptingStates,transitions,numStates);
-        return null;
+       return new RSAImpl(characters,acceptingStates,transitions,numStates);
     }
 
     @Override

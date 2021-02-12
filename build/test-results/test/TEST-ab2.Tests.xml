@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-12T00:29:51" hostname="MacBook-Pro-von-Elias.local" time="0.01">
+<testsuite name="ab2.Tests" tests="1" skipped="0" failures="1" errors="0" timestamp="2021-02-12T22:39:43" hostname="MacBook-Pro-von-Elias.local" time="0.019">
   <properties/>
-  <testcase name="toRSA()" classname="ab2.Tests" time="0.01">
-    <failure message="java.lang.NullPointerException: Cannot invoke &quot;ab2.RSA.getSymbols()&quot; because &quot;r&quot; is null" type="java.lang.NullPointerException">java.lang.NullPointerException: Cannot invoke &quot;ab2.RSA.getSymbols()&quot; because &quot;r&quot; is null
-	at ab2.Tests.isValidRSA(Tests.java:1933)
-	at ab2.Tests.testToRSA(Tests.java:2207)
-	at ab2.Tests.toRSA(Tests.java:1647)
+  <testcase name="NFA_Operations_Complement()" classname="ab2.Tests" time="0.019">
+    <failure message="org.opentest4j.AssertionFailedError: expected: &lt;false&gt; but was: &lt;true&gt;" type="org.opentest4j.AssertionFailedError">org.opentest4j.AssertionFailedError: expected: &lt;false&gt; but was: &lt;true&gt;
+	at org.junit.jupiter.api.AssertionUtils.fail(AssertionUtils.java:55)
+	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:40)
+	at org.junit.jupiter.api.AssertFalse.assertFalse(AssertFalse.java:35)
+	at org.junit.jupiter.api.Assertions.assertFalse(Assertions.java:210)
+	at ab2.Tests.NFA_Operations_Complement(Tests.java:1418)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
 	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:64)
 	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)

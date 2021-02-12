@@ -28,6 +28,14 @@ public class FAImpl implements FA {
         extractNodes();
     }
 
+    //only used as super-constructor
+    public FAImpl(Set<Character> symbols, Set<Integer> acceptingStates, int numStates) {
+        this.symbols = symbols;
+        this.acceptingStates = acceptingStates;
+        this.numStates = numStates;
+        this.count = -1;
+    }
+
     @Override
     public Set<Character> getSymbols() {
         return this.symbols;
@@ -140,22 +148,39 @@ public class FAImpl implements FA {
 
     @Override
     public FA complement() {
-        //TODO: Automat muss erst in RSA umgewandelt werden!
-        //RSA rsa = this.toRSA();
+        RSA rsa = this.toRSA();
 
-        Factory factory = new FactoryImpl();
-
-        //Endzustände und !Endzustände werden vertauscht
-        Set<Integer> acceptingStatesNew=new HashSet<>();
-
-        if(!this.acceptingStates.contains(0))acceptingStatesNew.add(0);
-
-        for(FATransition t: this.transitions){
-            if(!this.acceptingStates.contains(t.from()))acceptingStatesNew.add(t.from());
-            if(!this.acceptingStates.contains(t.to()))acceptingStatesNew.add(t.to());
+        //create new FATransitions
+        Set<FATransition> newTransitions = new HashSet<>();
+        for(DFATransition rsaT: rsa.getTransitions()){
+            String newSymbols = Character.toString(rsaT.symbol());
+            newTransitions.add(new FATransitionImpl(rsaT.from(),rsaT.to(),newSymbols));
         }
 
-        return factory.createFA(this.numStates, this.symbols, acceptingStatesNew, this.transitions);
+        //Endzustände und !Endzustände werden vertauscht
+        Set<Integer> NewAcceptingStates=new HashSet<>();
+
+        if(!rsa.getAcceptingStates().contains(0))//in case that there is no transition from start-state
+            NewAcceptingStates.add(0);
+
+        Set<Integer> checkedStates = new HashSet<>();
+        checkedStates.add(0);
+        for(FATransition t: rsa.getTransitions()){
+
+            if(!rsa.getAcceptingStates().contains(t.from()) && !checkedStates.contains(t.from())) {
+                NewAcceptingStates.add(t.from());
+                checkedStates.add(t.from());
+            }
+            if(!rsa.getAcceptingStates().contains(t.to()) && !checkedStates.contains(t.to())) {
+                NewAcceptingStates.add(t.to());
+                checkedStates.add(t.to());
+            }
+        }
+
+        Factory factory = new FactoryImpl();
+        FA fa = factory.createFA(this.numStates, this.symbols, NewAcceptingStates, newTransitions);
+        return fa;
+
     }
 
     @Override
@@ -198,14 +223,14 @@ public class FAImpl implements FA {
     public RSA toRSA() {
         //1. Epsilon Hüllen bilden
         //2. Algorithmus mit Epsilon Kanten
-        //3. Fehlende Kanten hinzufügen //TODO! (now it is just to DFA)
+        //3. Fehlende Kanten hinzufügen
         Factory factory = new FactoryImpl();
         Set<String> epsilon = new HashSet<>();
         epsilon.add("");
 
         List<Set<Integer>> epsilonCovers=findEpsilonCovers();
 
-        List<Set<Integer>> newStates = new ArrayList<>(); //RSA states as epsilon-cover (= all Z in algorithms table) //TODO: change to LIST
+        List<Set<Integer>> newStates = new ArrayList<>(); //RSA states as epsilon-cover (= all Z in algorithms table)
         newStates.add(epsilonCovers.get(0));
 
         Set<DFATransition> newTransitions = new HashSet<>();
@@ -214,7 +239,7 @@ public class FAImpl implements FA {
         List<Set<Integer>> nextZ = new ArrayList<>(); //FIFO Queue //Why is-always-empty warning?
         nextZ.add(epsilonCovers.get(0));//Start algorithm with epsilon cover of start State
 
-        while(nextZ.isEmpty()){
+        while(!nextZ.isEmpty()){
 
             Set<Integer> z = nextZ.remove(0); // why index out of bounds warning?
 
@@ -225,7 +250,14 @@ public class FAImpl implements FA {
                 Set<Integer> reached = loopForReachable(z,symbol); //all states reachable with current symbol
                 reached = loopForReachable(reached,epsilon); //epsilon cover of all reachable states
 
-                if(!newStates.contains(reached)){ //TODO: there may be a problem regarding copy-by-reference
+                boolean allreadyChecked=false;
+                for(Set<Integer> state: newStates){
+                    if(state.equals(reached)){
+                        allreadyChecked=true;
+                    }
+                }
+
+                if(!allreadyChecked){ //TODO: there may be a problem regarding copy-by-reference
                     nextZ.add(reached);
                     newStates.add(reached);
 
@@ -235,11 +267,11 @@ public class FAImpl implements FA {
 
                 int from=newStates.indexOf(z); //index of Z
                 int to=newStates.indexOf(reached);  //index of current reached
-                newTransitions.add(new DFATransitionImpl(from,to,Character.toString(currChar), currChar));
+                newTransitions.add(new DFATransitionImpl(from,to, currChar));
             }
         }
 
-        //DFA TO RSA //TODO: outsource DFAtoRSA
+        //DFA TO RSA
         int newNumStates=newStates.size()+1; //+1 since we need one state where all missing symbols go to
 
         boolean addedTransition=false;
@@ -251,7 +283,7 @@ public class FAImpl implements FA {
                         symbolExists=true;
                 }
                 if(!symbolExists) {
-                    newTransitions.add(new DFATransitionImpl(state, newNumStates-1, Character.toString(symbol), symbol));
+                    newTransitions.add(new DFATransitionImpl(state, newNumStates-1, symbol));
                     addedTransition=true;
                 }
             }
@@ -259,13 +291,13 @@ public class FAImpl implements FA {
         if(!addedTransition) newNumStates--; //undo +1
         else{
             for(char symbol: this.symbols){
-                newTransitions.add(new DFATransitionImpl(newNumStates-1, newNumStates-1, Character.toString(symbol), symbol));
+                newTransitions.add(new DFATransitionImpl(newNumStates-1, newNumStates-1, symbol));
             }
         }
 
 
-        RSA rsa = factory.createRSA(newNumStates, this.symbols, newAcceptingStates, newTransitions);
-        return rsa;
+        return factory.createRSA(newNumStates, this.symbols, newAcceptingStates, newTransitions);
+
     }
 
     /**
