@@ -95,6 +95,7 @@ public class FAImpl implements FA {
 
     @Override
     public FA intersection(FA a) {
+        //TODO: implement toRSA() first, then use komplement and union
         return null;
     }
 
@@ -105,12 +106,56 @@ public class FAImpl implements FA {
 
     @Override
     public FA concat(FA a) {
-        return null;
+        Factory factory = new FactoryImpl();
+        int offset=1000;
+
+        int numStatesNew=this.getNumStates()+a.getNumStates();
+
+        // combine symbols
+        Set<Character> symbolsNew = new HashSet<>();
+        symbolsNew.addAll(this.symbols);
+        symbolsNew.addAll(a.getSymbols());
+
+        // combine transitions
+        Set<FATransition> transitionsNew = new HashSet<>(this.transitions);
+
+        //transitions from this FA to a
+        for(int acceptingState :acceptingStates){
+            transitionsNew.add(factory.createTransition(acceptingState,offset,""));
+        }
+
+        //transitions in a
+        for (FATransition t : a.getTransitions()) {
+            transitionsNew.add(factory.createTransition(t.from()+offset, t.to()+offset, t.symbols()));
+        }
+
+        Set<Integer> acceptingStatesNew=new HashSet<>();
+        for(int state: a.getAcceptingStates()){
+            acceptingStatesNew.add(state+offset);
+        }
+
+
+        return factory.createFA(numStatesNew, symbolsNew, acceptingStatesNew, transitionsNew);
     }
 
     @Override
     public FA complement() {
-        return null;
+        //TODO: Automat muss erst in RSA umgewandelt werden!
+        //RSA rsa = this.toRSA();
+
+        Factory factory = new FactoryImpl();
+
+        //Endzustände und !Endzustände werden vertauscht
+        Set<Integer> acceptingStatesNew=new HashSet<>();
+
+        if(!this.acceptingStates.contains(0))acceptingStatesNew.add(0);
+
+        for(FATransition t: this.transitions){
+            if(!this.acceptingStates.contains(t.from()))acceptingStatesNew.add(t.from());
+            if(!this.acceptingStates.contains(t.to()))acceptingStatesNew.add(t.to());
+        }
+
+        return factory.createFA(this.numStates, this.symbols, acceptingStatesNew, this.transitions);
     }
 
     @Override
@@ -151,7 +196,116 @@ public class FAImpl implements FA {
 
     @Override
     public RSA toRSA() {
-        return null;
+        //1. Epsilon Hüllen bilden
+        //2. Algorithmus mit Epsilon Kanten
+        //3. Fehlende Kanten hinzufügen //TODO! (now it is just to DFA)
+        Factory factory = new FactoryImpl();
+        Set<String> epsilon = new HashSet<>();
+        epsilon.add("");
+
+        List<Set<Integer>> epsilonCovers=findEpsilonCovers();
+
+        List<Set<Integer>> newStates = new ArrayList<>(); //RSA states as epsilon-cover (= all Z in algorithms table) //TODO: change to LIST
+        newStates.add(epsilonCovers.get(0));
+
+        Set<DFATransition> newTransitions = new HashSet<>();
+        Set<Integer> newAcceptingStates=new HashSet<>();
+
+        List<Set<Integer>> nextZ = new ArrayList<>(); //FIFO Queue //Why is-always-empty warning?
+        nextZ.add(epsilonCovers.get(0));//Start algorithm with epsilon cover of start State
+
+        while(nextZ.isEmpty()){
+
+            Set<Integer> z = nextZ.remove(0); // why index out of bounds warning?
+
+            for(char currChar: symbols){
+                Set<String> symbol = new HashSet<>();
+                symbol.add(Character.toString(currChar));
+
+                Set<Integer> reached = loopForReachable(z,symbol); //all states reachable with current symbol
+                reached = loopForReachable(reached,epsilon); //epsilon cover of all reachable states
+
+                if(!newStates.contains(reached)){ //TODO: there may be a problem regarding copy-by-reference
+                    nextZ.add(reached);
+                    newStates.add(reached);
+
+                    if(isNewAcceptingState(this.acceptingStates, reached))
+                        newAcceptingStates.add(newStates.indexOf(reached));
+                }
+
+                int from=newStates.indexOf(z); //index of Z
+                int to=newStates.indexOf(reached);  //index of current reached
+                newTransitions.add(new DFATransitionImpl(from,to,Character.toString(currChar), currChar));
+            }
+        }
+
+        //DFA TO RSA //TODO: outsource DFAtoRSA
+        int newNumStates=newStates.size()+1; //+1 since we need one state where all missing symbols go to
+
+        boolean addedTransition=false;
+        for(int state=0;state<numStates; state++){
+            for(char symbol: this.symbols){
+                boolean symbolExists=false;
+                for(DFATransition t: newTransitions){
+                    if(t.from()==state && t.symbol()==symbol)
+                        symbolExists=true;
+                }
+                if(!symbolExists) {
+                    newTransitions.add(new DFATransitionImpl(state, newNumStates-1, Character.toString(symbol), symbol));
+                    addedTransition=true;
+                }
+            }
+        }
+        if(!addedTransition) newNumStates--; //undo +1
+        else{
+            for(char symbol: this.symbols){
+                newTransitions.add(new DFATransitionImpl(newNumStates-1, newNumStates-1, Character.toString(symbol), symbol));
+            }
+        }
+
+
+        RSA rsa = factory.createRSA(newNumStates, this.symbols, newAcceptingStates, newTransitions);
+        return rsa;
+    }
+
+    /**
+     * helper function to find epsilon covers of all States (used in toRSA)
+     */
+    private List<Set<Integer>> findEpsilonCovers(){
+        Set<Integer> states = new HashSet<>();
+
+        //all default states
+        for(int i=0; i<this.numStates;i++)
+            states.add(i);
+
+        //all states created with offset
+        for(FATransition t: this.transitions){
+            states.add(t.from());
+            states.add(t.to());
+        }
+
+        Set<String> epsilon = new HashSet<>();
+        epsilon.add("");
+
+        List<Set<Integer>> epsilonCovers = new ArrayList<>();
+        for(int i=0; i<states.size(); i++){
+            Set<Integer> reachable = new HashSet<>();
+            reachable.add(i);
+            epsilonCovers.add(loopForReachable(reachable, epsilon));
+        }
+
+        return epsilonCovers;
+    }
+
+    /**
+     * helper function to figure out if new node created in toRSA is a finite state
+     */
+    private boolean isNewAcceptingState(Set<Integer> acceptingStates, Set<Integer> testSet){
+        for(int state: testSet){
+            if(acceptingStates.contains(state))
+                return true;
+        }
+        return false;
     }
 
     /**
