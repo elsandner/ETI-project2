@@ -2,10 +2,9 @@ package ab2.impl.KleeweinOrazeSandner;
 
 import ab2.*;
 
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Set;
 
 /*********************************
  Created by Fabian Oraze on 08.02.21
@@ -241,7 +240,7 @@ public class FAImpl implements FA {
 
         while(!nextZ.isEmpty()){
 
-            Set<Integer> z = nextZ.remove(0); // why index out of bounds warning?
+            Set<Integer> z = nextZ.remove(0);
 
             for(char currChar: symbols){
                 Set<String> symbol = new HashSet<>();
@@ -250,20 +249,13 @@ public class FAImpl implements FA {
                 Set<Integer> reached = loopForReachable(z,symbol); //all states reachable with current symbol
                 reached = loopForReachable(reached,epsilon); //epsilon cover of all reachable states
 
-                boolean allreadyChecked=false;
-                for(Set<Integer> state: newStates){
-                    if(state.equals(reached)){
-                        allreadyChecked=true;
-                    }
-                }
-
-                if(!allreadyChecked){ //TODO: there may be a problem regarding copy-by-reference
+                if(!allreadyChecked(newStates, reached)){
                     nextZ.add(reached);
                     newStates.add(reached);
-
-                    if(isNewAcceptingState(this.acceptingStates, reached))
-                        newAcceptingStates.add(newStates.indexOf(reached));
                 }
+
+                if(isNewAcceptingState(this.acceptingStates, reached))
+                    newAcceptingStates.add(newStates.indexOf(reached));
 
                 int from=newStates.indexOf(z); //index of Z
                 int to=newStates.indexOf(reached);  //index of current reached
@@ -295,10 +287,39 @@ public class FAImpl implements FA {
             }
         }
 
+        //delete unused transitions (in case that we created transitions with nodes which do not exist anymore)
+
+        for (Iterator<DFATransition> t = newTransitions.iterator(); t.hasNext();) {
+            DFATransition curr = t.next();
+            if(curr.from()>newNumStates)
+                t.remove();
+            if(curr.to()>newNumStates)
+                t.remove();
+        }
 
         return factory.createRSA(newNumStates, this.symbols, newAcceptingStates, newTransitions);
 
     }
+
+    private boolean allreadyChecked(List<Set<Integer>> stateList, Set<Integer> stateB){
+
+        for(Set<Integer> stateA: stateList){//loop all states
+            boolean testA=true;
+            for(int value: stateA){
+                if(!stateB.contains(value))
+                    testA=false;
+            }
+
+            boolean testB=true;
+            for(int value: stateB){//loop all values of state
+                if(!stateA.contains(value))
+                    testB=false;
+            }
+            if(testA && testB) return true;
+        }
+        return false;
+    }
+
 
     /**
      * helper function to find epsilon covers of all States (used in toRSA)
@@ -426,7 +447,7 @@ public class FAImpl implements FA {
         for (FATransition t : this.transitions) {
             /*if (t.from() == 0 && possibleSymbols.contains(t.symbols()) || t.from() == 0 && t.symbols().equals(""))
                 reachableNew.add(t.to());*/
-            if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to());
+            if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to()); //
             if (reachableNew.contains(t.from()) && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
         }
         if (!reachableNew.equals(reachable)) return loopForReachable(reachableNew, possibleSymbols);
