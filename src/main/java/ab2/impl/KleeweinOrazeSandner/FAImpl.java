@@ -103,7 +103,11 @@ public class FAImpl implements FA {
     @Override
     public FA intersection(FA a) {
         //TODO: implement toRSA() first, then use komplement and union
-        return null;
+
+        FA compA = a.complement();
+        FA comCurr = complement();
+
+        return compA.union(comCurr);
     }
 
     @Override
@@ -114,9 +118,9 @@ public class FAImpl implements FA {
     @Override
     public FA concat(FA a) {
         Factory factory = new FactoryImpl();
-        int offset=1000;
+        int offset = 1000;
 
-        int numStatesNew=this.getNumStates()+a.getNumStates();
+        int numStatesNew = this.getNumStates() + a.getNumStates();
 
         // combine symbols
         Set<Character> symbolsNew = new HashSet<>();
@@ -127,18 +131,18 @@ public class FAImpl implements FA {
         Set<FATransition> transitionsNew = new HashSet<>(this.transitions);
 
         //transitions from this FA to a
-        for(int acceptingState :acceptingStates){
-            transitionsNew.add(factory.createTransition(acceptingState,offset,""));
+        for (int acceptingState : acceptingStates) {
+            transitionsNew.add(factory.createTransition(acceptingState, offset, ""));
         }
 
         //transitions in a
         for (FATransition t : a.getTransitions()) {
-            transitionsNew.add(factory.createTransition(t.from()+offset, t.to()+offset, t.symbols()));
+            transitionsNew.add(factory.createTransition(t.from() + offset, t.to() + offset, t.symbols()));
         }
 
-        Set<Integer> acceptingStatesNew=new HashSet<>();
-        for(int state: a.getAcceptingStates()){
-            acceptingStatesNew.add(state+offset);
+        Set<Integer> acceptingStatesNew = new HashSet<>();
+        for (int state : a.getAcceptingStates()) {
+            acceptingStatesNew.add(state + offset);
         }
 
 
@@ -151,33 +155,45 @@ public class FAImpl implements FA {
 
         //create new FATransitions
         Set<FATransition> newTransitions = new HashSet<>();
-        for(DFATransition rsaT: rsa.getTransitions()){
+        for (DFATransition rsaT : rsa.getTransitions()) {
             String newSymbols = Character.toString(rsaT.symbol());
-            newTransitions.add(new FATransitionImpl(rsaT.from(),rsaT.to(),newSymbols));
+            newTransitions.add(new FATransitionImpl(rsaT.from(), rsaT.to(), newSymbols));
         }
 
         //Endzustände und !Endzustände werden vertauscht
-        Set<Integer> NewAcceptingStates=new HashSet<>();
+        Set<Integer> newAcceptingStates = new HashSet<>();
 
-        if(!rsa.getAcceptingStates().contains(0))//in case that there is no transition from start-state
-            NewAcceptingStates.add(0);
+       /* if (!rsa.getAcceptingStates().contains(0))//in case that there is no transition from start-state
+            newAcceptingStates.add(0);
 
         Set<Integer> checkedStates = new HashSet<>();
         checkedStates.add(0);
-        for(FATransition t: rsa.getTransitions()){
+        for (FATransition t : rsa.getTransitions()) {
 
-            if(!rsa.getAcceptingStates().contains(t.from()) && !checkedStates.contains(t.from())) {
-                NewAcceptingStates.add(t.from());
+            if (!rsa.getAcceptingStates().contains(t.from()) && !checkedStates.contains(t.from())) {
+                newAcceptingStates.add(t.from());
                 checkedStates.add(t.from());
             }
-            if(!rsa.getAcceptingStates().contains(t.to()) && !checkedStates.contains(t.to())) {
-                NewAcceptingStates.add(t.to());
+            if (!rsa.getAcceptingStates().contains(t.to()) && !checkedStates.contains(t.to())) {
+                newAcceptingStates.add(t.to());
                 checkedStates.add(t.to());
+            }
+        }*/
+
+        Set<Integer> nonExceptingStates = new HashSet<>();
+        for (Integer state : rsa.getAcceptingStates()) {
+            nonExceptingStates.add(state);
+        }
+        for (FATransition t : rsa.getTransitions()) {
+            if (!nonExceptingStates.contains(t.from()) && !nonExceptingStates.contains(t.to())) {
+                newAcceptingStates.add(t.from());
+                newAcceptingStates.add(t.to());
             }
         }
 
+
         Factory factory = new FactoryImpl();
-        FA fa = factory.createFA(this.numStates, this.symbols, NewAcceptingStates, newTransitions);
+        FA fa = factory.createFA(this.numStates, this.symbols, newAcceptingStates, newTransitions);
         return fa;
 
     }
@@ -227,48 +243,50 @@ public class FAImpl implements FA {
         Set<String> epsilon = new HashSet<>();
         epsilon.add("");
 
-        List<Set<Integer>> epsilonCovers=findEpsilonCovers();
+        List<Set<Integer>> epsilonCovers = findEpsilonCovers();
 
         List<Set<Integer>> newStates = new ArrayList<>(); //RSA states as epsilon-cover (= all Z in algorithms table)
         newStates.add(epsilonCovers.get(0));
 
         Set<DFATransition> newTransitions = new HashSet<>();
-        Set<Integer> newAcceptingStates=new HashSet<>();
+        Set<Integer> newAcceptingStates = new HashSet<>();
 
         List<Set<Integer>> nextZ = new ArrayList<>(); //FIFO Queue //Why is-always-empty warning?
         nextZ.add(epsilonCovers.get(0));//Start algorithm with epsilon cover of start State
-        if(isNewAcceptingState(this.acceptingStates, epsilonCovers.get(0)))
+        if (isNewAcceptingState(this.acceptingStates, epsilonCovers.get(0)))
             newAcceptingStates.addAll(epsilonCovers.get(0));
 
-        while(!nextZ.isEmpty()){
+        while (!nextZ.isEmpty()) {
             Set<Integer> z = nextZ.remove(0);
 
-            for(char currChar: symbols){
+            for (char currChar : symbols) {
                 Set<Integer> reached = new HashSet<>();
-                for(int from: z) {
+                for (int from : z) {
                     for (FATransition t : this.transitions) {
-                        if (from==t.from() && Character.toString(currChar).equals(t.symbols())){
+                        if (from == t.from() && Character.toString(currChar).equals(t.symbols())) {
                             reached.add(t.to());
                         }
                     }
                 }
 
                 Set<Integer> reachedEpsilon = new HashSet<>();
-                for(int state: reached){
-                    reachedEpsilon.addAll(epsilonCovers.get(state));
+                for (int state : reached) {
+                    //reachedEpsilon.addAll(epsilonCovers.get(state));
+                    Collection<Integer> cover = getStateFromEpsilonCovers(epsilonCovers, state);
+                    if (cover != null) reachedEpsilon.addAll(cover);
                 }
 
-                if(!allreadyChecked(newStates, reachedEpsilon)){
-                   nextZ.add(reachedEpsilon);
-                   newStates.add(reachedEpsilon);
+                if (!allreadyChecked(newStates, reachedEpsilon)) {
+                    nextZ.add(reachedEpsilon);
+                    newStates.add(reachedEpsilon);
                 }
 
-                if(isNewAcceptingState(this.acceptingStates, reached))
+                if (isNewAcceptingState(this.acceptingStates, reached))
                     newAcceptingStates.add(newStates.indexOf(reached));
 
-                int from=newStates.indexOf(z); //index of Z
-                int to=newStates.indexOf(reached);  //index of current reached
-                newTransitions.add(new DFATransitionImpl(from,to, currChar));
+                int from = newStates.indexOf(z); //index of Z
+                int to = newStates.indexOf(reached);  //index of current reached
+                newTransitions.add(new DFATransitionImpl(from, to, currChar));
             }
         }
 
@@ -277,21 +295,30 @@ public class FAImpl implements FA {
 
     }
 
-    private boolean allreadyChecked(List<Set<Integer>> stateList, Set<Integer> stateB){
+    private Collection<Integer> getStateFromEpsilonCovers(List<Set<Integer>> epsilonCovers, int state) {
+        for (int i = 0; i < epsilonCovers.size(); i++) {
+            for (Integer epsilonSet : epsilonCovers.get(i)) {
+                if (epsilonSet == state) return epsilonCovers.get(i);
+            }
+        }
+        return null;
+    }
 
-        for(Set<Integer> stateA: stateList){//loop all states
-            boolean testA=true;
-            for(int value: stateA){
-                if(!stateB.contains(value))
-                    testA=false;
+    private boolean allreadyChecked(List<Set<Integer>> stateList, Set<Integer> stateB) {
+
+        for (Set<Integer> stateA : stateList) {//loop all states
+            boolean testA = true;
+            for (int value : stateA) {
+                if (!stateB.contains(value))
+                    testA = false;
             }
 
-            boolean testB=true;
-            for(int value: stateB){//loop all values of state
-                if(!stateA.contains(value))
-                    testB=false;
+            boolean testB = true;
+            for (int value : stateB) {//loop all values of state
+                if (!stateA.contains(value))
+                    testB = false;
             }
-            if(testA && testB) return true;
+            if (testA && testB) return true;
         }
         return false;
     }
@@ -300,15 +327,15 @@ public class FAImpl implements FA {
     /**
      * helper function to find epsilon covers of all States (used in toRSA)
      */
-    private List<Set<Integer>> findEpsilonCovers(){
+    private List<Set<Integer>> findEpsilonCovers() {
         Set<Integer> states = new HashSet<>();
 
         //all default states
-        for(int i=0; i<this.numStates;i++)
+        for (int i = 0; i < this.numStates; i++)
             states.add(i);
 
         //all states created with offset
-        for(FATransition t: this.transitions){
+        for (FATransition t : this.transitions) {
             states.add(t.from());
             states.add(t.to());
         }
@@ -317,7 +344,12 @@ public class FAImpl implements FA {
         epsilon.add("");
 
         List<Set<Integer>> epsilonCovers = new ArrayList<>();
-        for(int i=0; i<states.size(); i++){
+        /*for (int i = 0; i < states.size(); i++) {
+            Set<Integer> reachable = new HashSet<>();
+            reachable.add(i);
+            epsilonCovers.add(loopForReachable(reachable, epsilon));
+        }*/
+        for (Integer i : states) {
             Set<Integer> reachable = new HashSet<>();
             reachable.add(i);
             epsilonCovers.add(loopForReachable(reachable, epsilon));
@@ -329,9 +361,9 @@ public class FAImpl implements FA {
     /**
      * helper function to figure out if new node created in toRSA is a finite state
      */
-    private boolean isNewAcceptingState(Set<Integer> acceptingStates, Set<Integer> testSet){
-        for(int state: testSet){
-            if(acceptingStates.contains(state))
+    private boolean isNewAcceptingState(Set<Integer> acceptingStates, Set<Integer> testSet) {
+        for (int state : testSet) {
+            if (acceptingStates.contains(state))
                 return true;
         }
         return false;
@@ -420,16 +452,16 @@ public class FAImpl implements FA {
      */
 
     private Set<Integer> loopForReachable(Set<Integer> reachable, Set<String> possibleSymbols) {
-            Set<Integer> reachableNew = new HashSet<>(reachable);
-            for (FATransition t : this.transitions) {
+        Set<Integer> reachableNew = new HashSet<>(reachable);
+        for (FATransition t : this.transitions) {
                 /*if (t.from() == 0 && possibleSymbols.contains(t.symbols()) || t.from() == 0 && t.symbols().equals(""))
                     reachableNew.add(t.to());*/
-                if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to());
-                if (reachableNew.contains(t.from()) && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
-            }
-            if (!reachableNew.equals(reachable)) return loopForReachable(reachableNew, possibleSymbols);
-            else return reachableNew;
+            if (reachableNew.contains(t.from()) && t.symbols().equals("")) reachableNew.add(t.to());
+            if (reachableNew.contains(t.from()) && possibleSymbols.contains(t.symbols())) reachableNew.add(t.to());
         }
+        if (!reachableNew.equals(reachable)) return loopForReachable(reachableNew, possibleSymbols);
+        else return reachableNew;
+    }
 
     @Override
     public boolean acceptsEpsilonOnly() {
@@ -504,12 +536,15 @@ public class FAImpl implements FA {
 
     @Override
     public boolean subSetOf(FA a) {
-        return false;
+        FA aComp = a.complement();
+        FA intersection = intersection(aComp);
+
+        return intersection.acceptsNothing();
     }
 
     @Override
     public boolean equalTo(FA b) {
-        return false;
+        return subSetOf(b) && b.subSetOf(this);
     }
 
     @Override
